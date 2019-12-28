@@ -1,8 +1,15 @@
 package com.eric.aula_ufc;
 
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.FragmentActivity;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.LocationManager;
 import android.os.Bundle;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -11,9 +18,10 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implements OnMapReadyCallback {
+public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
     private GoogleMap mMap;
+    private LocationManager location;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -35,15 +43,43 @@ public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implem
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.setOnMapClickListener(this);
+
+        location = (LocationManager)getActivity().getSystemService(Context.LOCATION_SERVICE);
+        Criteria criteria = new Criteria();
+        String provider = location.getBestProvider(criteria, true);
+
+        Toast.makeText(getContext(), "Provider: " +provider, Toast.LENGTH_LONG);
+
+        if(ActivityCompat.checkSelfPermission(this.getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            && ActivityCompat.checkSelfPermission(this.getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this.getActivity(), new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            ActivityCompat.requestPermissions(this.getActivity(), new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+
+            return;
+        }
+        mMap.setMyLocationEnabled(true);
+
         // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        LatLng currentLocation = new LatLng(location.getLastKnownLocation(provider).getLatitude(),
+                location.getLastKnownLocation(provider).getLongitude());
+        mMap.addMarker(new MarkerOptions().position(currentLocation).title("Localização atual"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
     }
+
+
 
     public void markMap(String s){
         LatLng sydney = new LatLng(-34.6, 151);
         if(s != null && !s.isEmpty())
             mMap.addMarker(new MarkerOptions().position(sydney).title(s));
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {
+        Toast.makeText(getContext(), "Coordenadas" + latLng.toString(), Toast.LENGTH_SHORT).show();
     }
 }
