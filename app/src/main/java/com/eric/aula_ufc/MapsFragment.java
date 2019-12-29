@@ -7,6 +7,8 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -18,7 +20,7 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
-public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
+public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implements OnMapReadyCallback, GoogleMap.OnMapClickListener, LocationListener {
 
     private GoogleMap mMap;
     private LocationManager location;
@@ -73,13 +75,70 @@ public class MapsFragment extends /*FragmentActivity*/ SupportMapFragment implem
 
 
     public void markMap(String s){
-        LatLng sydney = new LatLng(-34.6, 151);
+        Criteria criteria = new Criteria();
+        String provider = location.getBestProvider(criteria, true);
+
+        if(ActivityCompat.checkSelfPermission(this.getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this.getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(this.getActivity(), new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+            ActivityCompat.requestPermissions(this.getActivity(), new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+
+            return;
+        }
+
+        LatLng currentLocation = new LatLng(location.getLastKnownLocation(provider).getLatitude(),
+                location.getLastKnownLocation(provider).getLongitude());
         if(s != null && !s.isEmpty())
-            mMap.addMarker(new MarkerOptions().position(sydney).title(s));
+            mMap.addMarker(new MarkerOptions().position(currentLocation).title(s));
     }
 
     @Override
     public void onMapClick(LatLng latLng) {
         Toast.makeText(getContext(), "Coordenadas" + latLng.toString(), Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        Toast.makeText(getActivity(), "Posição alterada", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onStatusChanged(String s, int i, Bundle bundle) {
+        Toast.makeText(getActivity(), "Status alterado", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onProviderEnabled(String s) {
+        Toast.makeText(getActivity(), "Provedor habilitado", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onProviderDisabled(String s) {
+        Toast.makeText(getActivity(), "Provedor desabilitado", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+
+        //ativa o GPS
+        location = (LocationManager)getActivity().getSystemService(Context.LOCATION_SERVICE);
+        if(ActivityCompat.checkSelfPermission(this.getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
+
+            ActivityCompat.requestPermissions(this.getActivity(), new String[]{
+                    Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
+
+            return;
+        }
+        location.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        location = (LocationManager)getActivity().getSystemService(Context.LOCATION_SERVICE);
+        location.removeUpdates(this);
     }
 }
